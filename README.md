@@ -217,8 +217,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🔗 Links
 
-- **Live App**: [Streamlit Cloud](https://your-streamlit-cloud-url-here) *(Add your link after deployment)*
-- **GitHub**: [Repository](https://github.com/yourusername/postgresql-cheatsheet)
+- **Live App**: [Streamlit Cloud](https://postgre-sql-cheat-sheet.streamlit.app/)
+- **GitHub**: [Repository](https://github.com/sarotechhub/PostgreSQL-Cheatsheet-Streamlit)
 - **PostgreSQL**: [Official Website](https://www.postgresql.org/)
 
 ---
