@@ -34,6 +34,20 @@ def _render_create_procedure() -> None:
     """Render create procedure section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Stored Procedures** are reusable code blocks that execute statements:
+    
+    - **Function vs Procedure**: Procedures don't return values (use for side effects)
+    - **Input parameters**: Accept values to customize behavior
+    - **Transaction control**: COMMIT/ROLLBACK within procedure
+    - **Variables**: Declare and use local variables
+    - **Conditional logic**: IF/ELSE for different paths
+    - **Loops**: FOR, WHILE for repetition
+    - **Error handling**: EXCEPTION to catch and handle errors
+    - **CALL statement**: Execute procedure (not SELECT)
+    - **PL/pgSQL language**: Procedural language for complex logic
+    """)
+    
     layout.render_code_block("""
 -- Simple procedure
 CREATE PROCEDURE update_user_status(
@@ -184,6 +198,62 @@ $$ LANGUAGE plpgsql;
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Daily Email Digest Procedure")
+    st.markdown("""
+    **Scenario:** Run every night to send digest emails to subscribers
+    
+    ```sql
+    CREATE PROCEDURE send_daily_digests() AS $$
+    DECLARE
+        user_row RECORD;
+        digest_count INT;
+    BEGIN
+        -- Find users who want digests
+        FOR user_row IN 
+            SELECT id, email, frequency FROM users WHERE receive_digest = TRUE
+        LOOP
+            BEGIN
+                -- Get articles posted since last digest
+                SELECT COUNT(*) INTO digest_count
+                FROM articles
+                WHERE published_at > CURRENT_TIMESTAMP - INTERVAL '1 day'
+                  AND category IN (SELECT UNNEST(user_row.interests));
+                
+                -- If new content, send email
+                IF digest_count > 0 THEN
+                    PERFORM send_email(
+                        user_row.email,
+                        'Your Daily Digest',
+                        'You have ' || digest_count || ' new articles'
+                    );
+                    
+                    -- Log the send
+                    INSERT INTO email_log (user_id, email_type, sent_at)
+                    VALUES (user_row.id, 'digest', CURRENT_TIMESTAMP);
+                END IF;
+                
+            EXCEPTION WHEN OTHERS THEN
+                -- Skip failed user, continue with next
+                RAISE WARNING 'Failed to send digest to %: %', user_row.email, SQLERRM;
+                CONTINUE;
+            END;
+        END LOOP;
+        
+        COMMIT;
+        RAISE NOTICE 'Daily digest procedure completed';
+    END;
+    $$ LANGUAGE plpgsql;
+    
+    -- Run via cron job
+    -- SELECT send_daily_digests();
+    
+    -- Or schedule in PostgreSQL 13+ with pg_cron
+    -- SELECT cron.schedule('daily-digest', '0 2 * * *', 'SELECT send_daily_digests();');
+    ```
+    
+    **Why this matters:** Procedures with loops handle complex business logic. Error handling ensures one bad email doesn't stop all digests. Better than writing loops in Python!
+    """)
     
     tips = [
         "Use procedures for complex business logic with COMMIT/ROLLBACK",

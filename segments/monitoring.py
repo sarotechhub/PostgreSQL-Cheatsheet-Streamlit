@@ -34,6 +34,20 @@ def _render_activity_monitoring() -> None:
     """Render activity monitoring section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Activity Monitoring** tracks what's happening in the database:
+    
+    - **Active connections**: Who's connected and what are they doing
+    - **pg_stat_activity**: System table with session information
+    - **Long-running queries**: Find queries taking too long
+    - **Idle connections**: Connections that aren't doing anything
+    - **Query execution time**: How long queries take
+    - **Database size**: Check storage usage
+    - **Connection limits**: Monitor against max_connections
+    - **Lock monitoring**: Find blocked queries
+    - **Transaction duration**: Track open transactions
+    """)
+    
     layout.render_code_block("""
 -- List active connections
 SELECT 
@@ -212,6 +226,58 @@ SELECT pg_stat_reset();
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Alert on Database Problems")
+    st.markdown("""
+    **Scenario:** Proactively detect slowdowns before customers complain
+    
+    ```sql
+    -- Create monitoring view
+    CREATE VIEW db_health_check AS
+    SELECT 
+        'Long Running Queries' as check_name,
+        COUNT(*) as count_value,
+        CASE WHEN COUNT(*) > 5 THEN 'ALERT' WHEN COUNT(*) > 3 THEN 'WARN' ELSE 'OK' END as status
+    FROM pg_stat_activity
+    WHERE state = 'active'
+      AND (NOW() - query_start) > INTERVAL '5 minutes'
+    
+    UNION ALL
+    
+    SELECT
+        'Disk Space - Largest Tables' as check_name,
+        COUNT(*) as count_value,
+        CASE WHEN SUM(pg_total_relation_size(schemaname||'.'||tablename)) > 100*1024*1024*1024 THEN 'ALERT' 
+             ELSE 'OK' END as status
+    FROM pg_tables
+    
+    UNION ALL
+    
+    SELECT
+        'Idle Connections' as check_name,
+        COUNT(*) as count_value,
+        CASE WHEN COUNT(*) > 50 THEN 'ALERT' ELSE 'OK' END as status
+    FROM pg_stat_activity
+    WHERE state = 'idle'
+      AND (NOW() - state_change) > INTERVAL '1 hour'
+    
+    UNION ALL
+    
+    SELECT
+        'Unused Indexes' as check_name,
+        COUNT(*) as count_value,
+        CASE WHEN COUNT(*) > 100 THEN 'WARN' ELSE 'OK' END as status
+    FROM pg_stat_user_indexes
+    WHERE idx_scan = 0;
+    
+    -- Check health hourly via cron
+    -- SELECT * FROM db_health_check WHERE status IN ('ALERT', 'WARN');
+    
+    -- Export to monitoring system (Grafana, Datadog, etc)
+    ```
+    
+    **Why this matters:** Proactive monitoring catches problems before customers see them. Long queries = slow website. Big tables = need archiving. Unused indexes = wasted space.
+    """)
     
     tips = [
         "Enable pg_stat_statements to track query performance",

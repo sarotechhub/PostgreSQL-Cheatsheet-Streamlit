@@ -34,6 +34,20 @@ def _render_fts_setup() -> None:
     """Render FTS setup section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Full Text Search** enables efficient text searching and ranking:
+    
+    - **TSVECTOR**: Text search vector (preprocessed searchable text)
+    - **TSQUERY**: Text search query (what you're searching for)
+    - **to_tsvector()**: Convert text to searchable vector
+    - **plainto_tsquery()**: Convert plain text to search query
+    - **@@ operator**: Matches if tsvector contains tsquery
+    - **setweight()**: Assign importance weights (A=highest, D=lowest)
+    - **Trigger function**: Auto-update search vector on data changes
+    - **Index creation**: GIN index on tsvector for speed
+    - **Ranking**: Use ts_rank() to order results by relevance
+    """)
+    
     layout.render_code_block("""
 -- Create table with text search column
 CREATE TABLE documents (
@@ -160,6 +174,57 @@ WHERE search_vector @@ query;
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Search Blog Posts Like Google")
+    st.markdown("""
+    **Scenario:** Blog with 100k articles. Need fast search with relevance ranking.
+    
+    ```sql
+    -- Create table with search capabilities
+    CREATE TABLE blog_posts (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255),
+        content TEXT,
+        author_id INT,
+        published_at TIMESTAMP,
+        search_vector TSVECTOR
+    );
+    
+    -- Trigger to auto-update search vector
+    CREATE FUNCTION update_blog_search_vector() RETURNS TRIGGER AS $$
+    BEGIN
+        NEW.search_vector := 
+            setweight(to_tsvector('english', NEW.title), 'A') ||
+            setweight(to_tsvector('english', NEW.content), 'B');
+        RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+    
+    CREATE TRIGGER blog_search_update 
+    BEFORE INSERT OR UPDATE ON blog_posts
+    FOR EACH ROW
+    EXECUTE FUNCTION update_blog_search_vector();
+    
+    -- Index for speed
+    CREATE INDEX idx_blog_search ON blog_posts USING GIN(search_vector);
+    
+    -- User searches, get ranked results
+    SELECT 
+        id, title, author_id,
+        ts_rank(search_vector, query) as relevance,
+        ts_headline(content, query, 'short') as snippet
+    FROM blog_posts,
+        plainto_tsquery('english', 'PostgreSQL optimization') AS query
+    WHERE search_vector @@ query
+      AND published_at > CURRENT_DATE - INTERVAL '1 year'
+    ORDER BY relevance DESC
+    LIMIT 10;
+    
+    -- Result: Fast, ranked search like Google, not LIKE %pattern%!
+    ```
+    
+    **Why this matters:** LIKE queries scan every row slowly. FTS indexes make searches instant even on 1M articles. Ranking shows relevant results first.
+    """)
     
     tips = [
         "Use GIN indexes for optimal FTS performance",

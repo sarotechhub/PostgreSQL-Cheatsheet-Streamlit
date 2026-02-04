@@ -34,6 +34,17 @@ def _render_basic_insert() -> None:
     """Render basic insert section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **INSERT** statements add new rows to tables. Here are the key patterns:
+    
+    - **Basic INSERT**: Specify columns and values to insert one row
+    - **Insert all columns**: No column list needed, but must provide all values in order
+    - **DEFAULT values**: Omit columns to use their default values
+    - **Multiple rows**: Insert many rows in one statement (more efficient)
+    - **INSERT FROM SELECT**: Copy data from another query result
+    - **RETURNING clause**: Get back generated IDs and other auto-computed values
+    """)
+    
     layout.render_code_block("""
 -- Single row insert
 INSERT INTO users (username, email)
@@ -69,11 +80,41 @@ RETURNING id, username, created_at;
     """, title="SQL Examples")
     
     layout.render_tip("Use RETURNING to get back generated IDs and timestamps")
+    
+    st.markdown("### 🏢 Real-World Example: User Registration in Web App")
+    st.markdown("""
+    **Scenario:** New user signs up on your website
+    
+    ```sql
+    -- Insert new user and get back their ID for immediate use
+    INSERT INTO users (username, email, password_hash, registration_ip)
+    VALUES ('john_doe', 'john@example.com', 'hashed_password_xyz', '192.168.1.1')
+    RETURNING id, username, created_at;
+    
+    -- Result: You immediately get the new user ID to create session, profile, etc.
+    -- Without RETURNING, you'd have to query the database again to find the ID
+    ```
+    
+    **Why this matters:** RETURNING lets you use the generated ID immediately without extra queries, improving app performance and reducing round trips to database.
+    """)
 
 
 def _render_advanced_insert() -> None:
     """Render advanced insert section."""
     layout = get_layout_manager()
+    
+    st.markdown("""
+    **Advanced INSERT** techniques for complex scenarios:
+    
+    - **ON CONFLICT (Upsert)**: Insert if new, update if exists (avoids duplicates)
+    - **ON CONFLICT DO NOTHING**: Silently skip duplicates
+    - **ON CONFLICT DO UPDATE**: Update existing row instead of failing
+    - **EXCLUDED reference**: Access attempted insert values in DO UPDATE
+    - **Bulk insert in transaction**: Wrap many inserts for better performance
+    - **Insert with expressions**: Use calculations in values
+    - **Insert with window functions**: Assign ranks or sequence numbers
+    - **Conditional insert**: Insert only rows matching criteria
+    """)
     
     layout.render_code_block("""
 -- INSERT ... ON CONFLICT (upsert)
@@ -129,6 +170,23 @@ COMMIT;
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Preventing Duplicate Email Signups")
+    st.markdown("""
+    **Scenario:** User clicks 'Sign Up' button twice (network issue or double-click)
+    
+    ```sql
+    -- First signup attempt - email doesn't exist
+    INSERT INTO users (email, username, created_at)
+    VALUES ('jane@example.com', 'jane_smith', CURRENT_TIMESTAMP)
+    ON CONFLICT (email) DO NOTHING;
+    
+    -- Second signup with same email - silently ignored, no error
+    -- Without ON CONFLICT, you'd get a duplicate key error and crash the signup flow
+    ```
+    
+    **Why this matters:** Handles race conditions gracefully without application errors, improving user experience for double-clicks or network retries.
+    """)
     
     tips = [
         "Always specify column names in INSERT statements (avoid relying on column order)",

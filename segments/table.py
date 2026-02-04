@@ -44,6 +44,20 @@ def _render_create_table() -> None:
     """Render create table section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **CREATE TABLE** defines the structure and constraints for data storage:
+    
+    - **Column types**: SERIAL (auto-increment), VARCHAR, INT, DECIMAL, TIMESTAMP, etc.
+    - **PRIMARY KEY**: Unique identifier for each row
+    - **NOT NULL**: Column must always have a value
+    - **UNIQUE**: Column values must be unique
+    - **DEFAULT**: Default value if none provided
+    - **FOREIGN KEY**: Reference to primary key in another table
+    - **CHECK**: Constraint on allowed values
+    - **ON DELETE CASCADE**: Automatically delete related rows
+    - **UNLOGGED**: Fast but not crash-safe (for temporary data)
+    """)
+    
     layout.render_code_block("""
 -- Basic table creation
 CREATE TABLE users (
@@ -177,6 +191,48 @@ WHERE table_name = 'users';
     """, title="SQL Examples")
     
     layout.render_warning("CASCADE drops all dependent objects - use carefully!")
+    
+    st.markdown("### 🏢 Real-World Example: E-Commerce Database Schema")
+    st.markdown("""
+    **Scenario:** Design normalized tables for orders, customers, and products
+    
+    ```sql
+    CREATE TABLE customers (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        name VARCHAR(100) NOT NULL,
+        country VARCHAR(2),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    CREATE TABLE products (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        sku VARCHAR(50) NOT NULL UNIQUE,
+        price DECIMAL(10, 2) NOT NULL CHECK (price > 0),
+        stock_level INT DEFAULT 0,
+        supplier_id INT REFERENCES suppliers(id)
+    );
+    
+    CREATE TABLE orders (
+        id BIGSERIAL PRIMARY KEY,
+        customer_id INT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        total_amount DECIMAL(12, 2),
+        status VARCHAR(20) DEFAULT 'pending'
+    );
+    
+    CREATE TABLE order_items (
+        id SERIAL PRIMARY KEY,
+        order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+        product_id INT NOT NULL REFERENCES products(id),
+        quantity INT NOT NULL CHECK (quantity > 0),
+        unit_price DECIMAL(10, 2) NOT NULL
+    );
+    ```
+    
+    **Why this matters:** Proper schema design prevents data anomalies, makes queries efficient, and enforces business rules at the database level.
+    """)
 
 
 def _render_table_info() -> None:

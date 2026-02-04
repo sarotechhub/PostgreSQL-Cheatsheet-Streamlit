@@ -39,6 +39,20 @@ def _render_create_materialized_view() -> None:
     """Render create materialized view section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Materialized Views** pre-compute and store query results:
+    
+    - **Pre-computed results**: Data stored physically (not computed on query)
+    - **Fast queries**: No need to run aggregations/joins
+    - **Trade-off**: Uses disk space, requires manual refresh
+    - **REFRESH MATERIALIZED VIEW**: Update stored data from source tables
+    - **CONCURRENTLY**: Refresh without locking view
+    - **Regular views**: Computed fresh each query (slow for complex queries)
+    - **Materialized views**: Use when query is expensive and data doesn't change often
+    - **Indexes on views**: Can create indexes on materialized views
+    - **Staleness**: Data can be out of sync until refreshed
+    """)
+    
     layout.render_code_block("""
 -- Basic materialized view
 CREATE MATERIALIZED VIEW user_stats AS
@@ -163,6 +177,47 @@ WHERE matviewname = 'user_stats';
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Cache Expensive Dashboard Query")
+    st.markdown("""
+    **Scenario:** Dashboard query with 5 JOINs and GROUP BY takes 30 seconds. Users see timeout.
+    
+    ```sql
+    -- BEFORE: Dashboard runs complex query every time
+    -- SELECT ... FROM orders
+    -- JOIN customers ON ...
+    -- JOIN order_items ON ...
+    -- JOIN products ON ...
+    -- GROUP BY ... HAVING ...
+    -- Result: Takes 30 seconds! Users click away.
+    
+    -- AFTER: Pre-compute with materialized view
+    CREATE MATERIALIZED VIEW dashboard_metrics AS
+    SELECT 
+        c.id as customer_id,
+        c.name,
+        COUNT(o.id) as orders,
+        SUM(o.total) as lifetime_value,
+        AVG(p.price) as avg_product_price
+    FROM customers c
+    LEFT JOIN orders o ON c.id = o.customer_id
+    LEFT JOIN order_items oi ON o.id = oi.order_id
+    LEFT JOIN products p ON oi.product_id = p.id
+    GROUP BY c.id, c.name;
+    
+    -- Create index on materialized view for even faster lookups
+    CREATE UNIQUE INDEX idx_dashboard_metrics ON dashboard_metrics(customer_id);
+    
+    -- Dashboard query now instant!
+    SELECT * FROM dashboard_metrics ORDER BY lifetime_value DESC;
+    -- Result: <100ms instead of 30 seconds!
+    
+    -- Refresh nightly when traffic is low
+    REFRESH MATERIALIZED VIEW CONCURRENTLY dashboard_metrics;
+    ```
+    
+    **Why this matters:** Pre-computed results serve dashboard instantly. Without materialization, slow queries frustrate users. Refresh on schedule when few users online.
+    """)
     
     tips = [
         "Use materialized views for expensive, frequently-accessed queries",

@@ -34,6 +34,20 @@ def _render_partition_types() -> None:
     """Render partition types section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Partitioning** divides large tables into smaller parts:
+    
+    - **Range partitioning**: Divide by value ranges (e.g., dates)
+    - **List partitioning**: Divide by specific values (e.g., regions)
+    - **Hash partitioning**: Divide using hash function for even distribution
+    - **Composite partitioning**: Combine methods (range then list)
+    - **Benefits**: Faster queries, easier maintenance, parallel processing
+    - **Pruning**: Query planner skips partitions not matching condition
+    - **Partition inheritance**: Child tables inherit from parent
+    - **Management**: Easy to add/remove partitions
+    - **Performance**: Large tables become manageable chunks
+    """)
+    
     layout.render_code_block("""
 -- Range partition (by date range)
 CREATE TABLE orders (
@@ -153,6 +167,43 @@ WHERE table_name = 'orders_2024_q1';
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Archive Old Orders Efficiently")
+    st.markdown("""
+    **Scenario:** Your orders table has 500 million rows. Queries are slow because of data volume.
+    
+    ```sql
+    -- BEFORE: One massive table
+    -- SELECT count(*) FROM orders takes 10 minutes!
+    
+    -- AFTER: Partition by year
+    CREATE TABLE orders (
+        id BIGSERIAL,
+        customer_id INT,
+        order_date DATE,
+        total DECIMAL,
+        PRIMARY KEY (id, order_date)
+    ) PARTITION BY RANGE (EXTRACT(YEAR FROM order_date));
+    
+    CREATE TABLE orders_2022 PARTITION OF orders
+        FOR VALUES FROM (2022) TO (2023);
+    CREATE TABLE orders_2023 PARTITION OF orders
+        FOR VALUES FROM (2023) TO (2024);
+    CREATE TABLE orders_2024 PARTITION OF orders
+        FOR VALUES FROM (2024) TO (2025);
+    
+    -- Query only current year - queries on orders_2024 are instant!
+    SELECT COUNT(*) FROM orders WHERE EXTRACT(YEAR FROM order_date) = 2024;
+    -- Only scans orders_2024 partition = 50 million rows instead of 500 million
+    
+    -- Old year can be archived to cheaper storage
+    ALTER TABLE orders DETACH PARTITION orders_2022;
+    CREATE TABLE orders_2022_archive AS SELECT * FROM orders_2022;
+    DROP TABLE orders_2022;  -- Free up space
+    ```
+    
+    **Why this matters:** Queries on orders_2024 are 10x faster. Can archive old years. Maintenance (VACUUM, ANALYZE) is faster on smaller tables.
+    """)
     
     tips = [
         "Use partitioning for very large tables (100GB+)",

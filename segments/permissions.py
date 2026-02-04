@@ -34,6 +34,21 @@ def _render_grant_permissions() -> None:
     """Render grant permissions section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Permissions** control who can access what objects:
+    
+    - **GRANT**: Give permissions to users/roles
+    - **SELECT**: Read permission (query data)
+    - **INSERT**: Add new rows
+    - **UPDATE**: Modify existing data
+    - **DELETE**: Remove rows
+    - **EXECUTE**: Run functions/procedures
+    - **ALL PRIVILEGES**: Grant all permissions
+    - **ON ALL TABLES**: Apply to all tables in schema
+    - **WITH GRANT OPTION**: User can grant permissions to others
+    - **REVOKE**: Remove permissions
+    """)
+    
     layout.render_code_block("""
 -- Grant SELECT (read) permission on table
 GRANT SELECT ON users TO app_user;
@@ -136,6 +151,45 @@ ALTER DEFAULT PRIVILEGES RESET ALL;
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Setting Up Audit Trail with Limited Permissions")
+    st.markdown("""
+    **Scenario:** Audit table should be writable by app, readable by auditors, protected from users
+    
+    ```sql
+    -- Create audit table
+    CREATE TABLE audit_log (
+        id BIGSERIAL PRIMARY KEY,
+        table_name VARCHAR,
+        operation VARCHAR(10),
+        old_values JSONB,
+        new_values JSONB,
+        changed_by VARCHAR,
+        changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    -- Create function to log changes (protected, only accessible internally)
+    CREATE FUNCTION log_audit_change() RETURNS TRIGGER AS $$ 
+    BEGIN
+        INSERT INTO audit_log VALUES (DEFAULT, TG_TABLE_NAME, TG_OP, row_to_json(OLD), row_to_json(NEW), current_user, NOW());
+        RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql SECURITY DEFINER;
+    
+    -- App can INSERT/SELECT but not UPDATE/DELETE audit logs
+    GRANT SELECT, INSERT ON audit_log TO app_user;
+    
+    -- Auditors can only READ, not modify
+    GRANT SELECT ON audit_log TO auditors;
+    
+    -- Regular users cannot access audit table at all
+    REVOKE ALL ON audit_log FROM public;
+    
+    -- Even if attacker gains app credentials, they can't DELETE audit logs!
+    ```
+    
+    **Why this matters:** Audit trail is tamper-proof. If hacker compromises app account, they can still write logs but can't delete evidence of their actions.
+    """)
     
     tips = [
         "Grant minimum necessary permissions (principle of least privilege)",

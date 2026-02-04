@@ -39,6 +39,19 @@ def _render_basic_select() -> None:
     """Render basic select section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **SELECT** statements are used to retrieve data from tables. Here are the basic patterns you'll use:
+    
+    - **SELECT all columns** (*): Retrieves every column from a table
+    - **SELECT specific columns**: Retrieves only the columns you need (more efficient)
+    - **Column aliases (AS)**: Rename columns for better readability in results
+    - **Expressions**: Use functions like UPPER(), LENGTH() to transform data
+    - **LIMIT**: Control how many rows you retrieve
+    - **OFFSET**: Skip rows for pagination (LIMIT with OFFSET)
+    - **DISTINCT**: Get unique values, removing duplicates
+    - **COUNT()**: Count the number of rows matching your criteria
+    """)
+    
     layout.render_code_block("""
 -- Select all columns
 SELECT * FROM users;
@@ -78,11 +91,44 @@ SELECT username AS name, email AS contact FROM users;
     """, title="SQL Examples")
     
     layout.render_tip("Specify columns instead of SELECT * for better performance and clarity")
+    
+    st.markdown("### 🏢 Real-World Example: E-Commerce Product Listing")
+    st.markdown("""
+    **Scenario:** Display products on your online store with pagination
+    
+    ```sql
+    -- Users see 20 products per page, browsing different pages
+    SELECT id, name, price, category, stock_level
+    FROM products
+    WHERE is_active = TRUE
+      AND stock_level > 0
+    ORDER BY popularity DESC
+    LIMIT 20 OFFSET 0;  -- Page 1
+    
+    LIMIT 20 OFFSET 20;  -- Page 2
+    LIMIT 20 OFFSET 40;  -- Page 3
+    ```
+    
+    **Why this matters:** Pagination prevents loading thousands of products at once, improving page load speed and user experience.
+    """)
 
 
 def _render_filtering_sorting() -> None:
     """Render filtering and sorting section."""
     layout = get_layout_manager()
+    
+    st.markdown("""
+    **Filtering & Sorting** helps you narrow down results and organize them:
+    
+    - **WHERE**: Filter rows based on conditions
+    - **AND/OR**: Combine multiple conditions (AND = all must be true, OR = at least one true)
+    - **IN**: Check if a value exists in a list
+    - **BETWEEN**: Find values within a range
+    - **LIKE / ILIKE**: Pattern matching (% = any characters, _ = single character)
+    - **IS NULL / IS NOT NULL**: Check for missing values
+    - **ORDER BY**: Sort results (ASC = ascending, DESC = descending)
+    - **NULL handling in ORDER BY**: Control how NULL values are sorted
+    """)
     
     layout.render_code_block("""
 -- WHERE clause - filter by conditions
@@ -127,11 +173,42 @@ SELECT * FROM products
 ORDER BY price DESC 
 LIMIT 10;  -- Top 10 most expensive
     """, title="SQL Examples")
+    
+    st.markdown("### 🏢 Real-World Example: Finding Inactive Users to Delete")
+    st.markdown("""
+    **Scenario:** You need to clean up inactive accounts from the database
+    
+    ```sql
+    -- Find inactive users (no login for 12 months) for cleanup
+    SELECT id, username, email, last_login
+    FROM users
+    WHERE last_login < CURRENT_DATE - INTERVAL '1 year'
+       OR (last_login IS NULL AND created_at < CURRENT_DATE - INTERVAL '2 years')
+    ORDER BY last_login DESC
+    LIMIT 1000;
+    ```
+    
+    **Why this matters:** GDPR compliance requires removing old inactive accounts; filtering first ensures you delete the right users.
+    """)
 
 
 def _render_advanced_select() -> None:
     """Render advanced select section."""
     layout = get_layout_manager()
+    
+    st.markdown("""
+    **Advanced SELECT** techniques for complex queries:
+    
+    - **CASE statements**: Conditional logic (if-then-else for data) to categorize rows
+    - **GROUP BY**: Aggregate data by categories (combine with COUNT, SUM, AVG, etc.)
+    - **HAVING**: Filter groups after aggregation (like WHERE but for GROUP BY)
+    - **Window Functions**: Calculate values across sets of rows (ranking, running totals, etc.)
+    - **CTEs (WITH)**: Temporary named result sets for cleaner, more readable queries
+    - **Recursive CTEs**: Self-referencing queries for hierarchical data
+    - **UNION**: Combine results from multiple queries (removes duplicates)
+    - **EXCEPT**: Find rows in first query but not in second
+    - **INTERSECT**: Find rows that appear in both queries
+    """)
     
     layout.render_code_block("""
 -- CASE statement - conditional selection
@@ -204,6 +281,24 @@ SELECT user_id FROM orders;
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Finding Customers Who Never Made a Purchase")
+    st.markdown("""
+    **Scenario:** Marketing team wants to re-engage registered users who haven't ordered
+    
+    ```sql
+    -- Find users registered but never placed an order
+    SELECT id, email, username, created_at
+    FROM users
+    WHERE id NOT IN (
+        SELECT DISTINCT user_id FROM orders
+    )
+      AND created_at < CURRENT_DATE - INTERVAL '30 days'
+    ORDER BY created_at DESC;
+    ```
+    
+    **Why this matters:** Identify dormant users for re-engagement campaigns without scanning millions of order records individually.
+    """)
     
     tips = [
         "Select only needed columns instead of SELECT *",

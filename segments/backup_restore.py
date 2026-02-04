@@ -34,6 +34,20 @@ def _render_backup_methods() -> None:
     """Render backup methods section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Backup Methods** protect your data from loss:
+    
+    - **SQL dump (text)**: Human-readable SQL commands (pg_dump)
+    - **Custom/Binary format**: Compressed, faster restore (pg_dump -Fc)
+    - **Data only**: Just data, no schema (--data-only)
+    - **Schema only**: Just structure, no data (--schema-only)
+    - **Specific table**: Backup single table (--table)
+    - **Full backup**: Database structure + data + sequences
+    - **Incremental backup**: Only changes since last backup
+    - **Point-in-time recovery**: Restore to specific timestamp
+    - **Frequency**: Regular backups prevent data loss
+    """)
+    
     layout.render_code_block("""
 -- SQL dump (text format)
 pg_dump -U postgres mydb > backup.sql
@@ -121,6 +135,43 @@ pg_restore -U postgres --exit-on-error=false -d mydb backup.dump
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Automated Backup Strategy")
+    st.markdown("""
+    **Scenario:** 24/7 SaaS app, can't afford data loss, need fast restore
+    
+    ```bash
+    #!/bin/bash
+    # Daily backup script (run via cron)
+    
+    BACKUP_DIR="/backups/postgresql"
+    DB_NAME="production_db"
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    
+    # Full backup at midnight
+    pg_dump -U postgres -Fc $DB_NAME | gzip > $BACKUP_DIR/full_$TIMESTAMP.dump.gz
+    
+    # Verify backup is valid (test restore)
+    pg_restore -U postgres --list $BACKUP_DIR/full_$TIMESTAMP.dump.gz > /dev/null
+    
+    # Keep only last 30 days
+    find $BACKUP_DIR -name "full_*.dump.gz" -mtime +30 -delete
+    
+    # Alert if backup fails
+    if [ $? -ne 0 ]; then
+        echo "BACKUP FAILED!" | mail -s "Critical: DB Backup Failed" admin@example.com
+    fi
+    
+    # Crontab entry
+    # 0 2 * * * /scripts/backup_db.sh  (Run daily at 2 AM)
+    
+    # On disaster, restore from backup
+    createdb restored_db
+    pg_restore -U postgres -d restored_db /backups/postgresql/full_20250205_000000.dump.gz
+    ```
+    
+    **Why this matters:** Automated backups save your business. Without them, one SQL mistake deletes everything. gzip saves 70% disk space. Testing restore ensures backups actually work!
+    """)
     
     tips = [
         "Take regular backups - automate with cron or scheduler",

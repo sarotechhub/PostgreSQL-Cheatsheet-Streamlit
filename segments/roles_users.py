@@ -34,6 +34,19 @@ def _render_create_role() -> None:
     """Render create role section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Roles and Users** control database access and permissions:
+    
+    - **ROLE**: Database object for managing permissions (can't login by default)
+    - **USER**: Shorthand for role with LOGIN privilege
+    - **PASSWORD**: Required for login (never hardcode, use environment variables)
+    - **SUPERUSER**: Extreme privilege - use only for admins
+    - **CREATEDB**: Allows user to create new databases
+    - **CREATEUSER**: Allows user to create new roles
+    - **INHERIT**: Role inherits permissions from groups
+    - **Role membership**: Assign roles to users for permission grouping
+    """)
+    
     layout.render_code_block("""
 -- Create basic role (cannot login)
 CREATE ROLE admin_group;
@@ -141,6 +154,44 @@ GRANT SELECT ON TABLES TO readonly_group;
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Implementing Principle of Least Privilege")
+    st.markdown("""
+    **Scenario:** Different teams need different database access levels
+    
+    ```sql
+    -- Create role groups
+    CREATE ROLE developers NOINHERIT;
+    CREATE ROLE data_analysts NOINHERIT;
+    CREATE ROLE read_only_users NOINHERIT;
+    
+    -- Individual user accounts that inherit role permissions
+    CREATE USER alice WITH PASSWORD 'secure_pass123';
+    CREATE USER bob WITH PASSWORD 'secure_pass456';
+    CREATE USER charlie WITH PASSWORD 'secure_pass789';
+    
+    -- Assign roles based on job function
+    GRANT developers TO alice;        -- Alice can write code, modify schema
+    GRANT data_analysts TO bob;       -- Bob can only SELECT, no writes
+    GRANT read_only_users TO charlie; -- Charlie can only read, for dashboards
+    
+    -- Grant specific permissions per role group
+    GRANT USAGE ON SCHEMA public TO developers;
+    GRANT CREATE ON SCHEMA public TO developers;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO developers;
+    
+    GRANT USAGE ON SCHEMA public TO data_analysts;
+    GRANT SELECT ON ALL TABLES IN SCHEMA public TO data_analysts;
+    
+    GRANT USAGE ON SCHEMA public TO read_only_users;
+    GRANT SELECT ON ALL TABLES IN SCHEMA public TO read_only_users;
+    
+    -- Now: If alice's credentials leak, attacker can only do what developers can do
+    -- Can't do what data_analysts or read_only_users can do
+    ```
+    
+    **Why this matters:** Limits damage from compromised credentials. Developer with SELECT-only access can't accidentally DROP tables!
+    """)
     
     tips = [
         "Create separate roles for different application users",

@@ -34,6 +34,20 @@ def _render_query_analysis() -> None:
     """Render query analysis section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Query Analysis** helps understand how PostgreSQL executes queries:
+    
+    - **EXPLAIN**: Show query plan WITHOUT executing (cost estimation)
+    - **EXPLAIN ANALYZE**: Execute and show actual time/rows processed
+    - **Query plan**: Step-by-step how database accesses data
+    - **Seq Scan**: Full table scan (slow for large tables)
+    - **Index Scan**: Using index (fast for targeted queries)
+    - **Nested Loop**: Join method (slow, usually)
+    - **Hash Join**: Join method (faster for large datasets)
+    - **BUFFERS option**: Shows cache/disk usage
+    - **Actual vs estimated**: Difference indicates stats accuracy
+    """)
+    
     layout.render_code_block("""
 -- EXPLAIN (show query plan, don't execute)
 EXPLAIN SELECT * FROM users WHERE email = 'test@example.com';
@@ -154,6 +168,54 @@ SET max_parallel_workers_per_gather = 4;
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Optimize Slow E-Commerce Search")
+    st.markdown("""
+    **Scenario:** Product search takes 30 seconds, customers abandon carts
+    
+    ```sql
+    -- BEFORE: Slow search query
+    EXPLAIN ANALYZE
+    SELECT p.* FROM products p
+    WHERE p.name LIKE '%laptop%'
+       OR p.description LIKE '%laptop%'
+    LIMIT 50;
+    -- Output: Seq Scan on products (30 seconds) - full table scan!
+    
+    -- STEP 1: Add indexes
+    CREATE INDEX idx_products_name ON products(name);
+    CREATE INDEX idx_products_description_tsvector 
+        ON products USING GIN(to_tsvector('english', description));
+    
+    -- STEP 2: Rewrite using indexes
+    EXPLAIN ANALYZE
+    SELECT p.* FROM products p
+    WHERE p.name ILIKE '%laptop%'  -- ILIKE uses index
+       OR to_tsvector('english', p.description) @@ to_tsquery('laptop')
+    LIMIT 50;
+    -- Output: Index Scan (100ms) - 300x faster!
+    
+    -- STEP 3: Use window function for ranking
+    SELECT 
+        id, name, price,
+        CASE 
+            WHEN name ILIKE '%laptop%' THEN 1
+            ELSE 2
+        END as relevance
+    FROM products p
+    WHERE name ILIKE '%laptop%'
+       OR to_tsvector('english', p.description) @@ to_tsquery('laptop')
+    ORDER BY relevance, price
+    LIMIT 50;
+    
+    -- STEP 4: Cache with materialized view
+    CREATE MATERIALIZED VIEW popular_searches AS
+    SELECT id, name, price FROM products WHERE views > 1000;
+    CREATE INDEX idx_popular_searches ON popular_searches(id);
+    ```
+    
+    **Why this matters:** 30s → 100ms = 300x improvement! Customers see results instantly. Sales increase!
+    """)
     
     tips = [
         "Always use EXPLAIN ANALYZE before optimizing",

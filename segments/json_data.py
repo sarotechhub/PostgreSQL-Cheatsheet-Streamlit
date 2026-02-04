@@ -34,6 +34,19 @@ def _render_json_operations() -> None:
     """Render JSON operations section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **JSON/JSONB** types store semi-structured data:
+    
+    - **JSON**: Stores as text (slower but preserves formatting)
+    - **JSONB**: Binary format (faster, supports indexing, no duplicate keys)
+    - **Extract values**: Use -> operator to get fields
+    - **Get as text**: Use ->> operator to return text instead of JSON
+    - **Nested access**: Use -> with array indices or object keys
+    - **JSON functions**: json_extract_path(), jsonb_agg(), etc.
+    - **Querying**: Use @> (contains) operator to search JSON
+    - **Indexing**: Create indexes on JSONB for performance
+    """)
+    
     layout.render_code_block("""
 -- Create table with JSONB column
 CREATE TABLE users (
@@ -145,6 +158,48 @@ WHERE metadata @> '{"verified": true}'::jsonb;
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Store User Preferences Flexibly")
+    st.markdown("""
+    **Scenario:** User preferences vary widely. Some prefer email, others SMS. Some use dark mode, others light.
+    
+    ```sql
+    -- Traditional approach: Add column for every preference
+    -- ALTER TABLE users ADD COLUMN prefer_email BOOLEAN;
+    -- ALTER TABLE users ADD COLUMN prefer_sms BOOLEAN;
+    -- ALTER TABLE users ADD COLUMN theme VARCHAR;
+    -- ALTER TABLE users ADD COLUMN language VARCHAR;
+    -- ALTER TABLE users ADD COLUMN timezone VARCHAR;
+    -- Result: Table becomes unmaintainable with 100 columns!
+    
+    -- BETTER: Store flexible preferences as JSONB
+    CREATE TABLE users (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR,
+        preferences JSONB DEFAULT '{}'
+    );
+    
+    -- Insert flexible preferences
+    INSERT INTO users (username, preferences) VALUES (
+        'alice',
+        '{"notifications": {"email": true, "sms": false, "push": true},
+          "display": {"theme": "dark", "language": "es"},
+          "privacy": {"profile_visible": true}}'
+    );
+    
+    -- Query users with specific preference
+    SELECT * FROM users WHERE preferences @> '{"display": {"theme": "dark"}}';
+    
+    -- Update nested preference
+    UPDATE users SET preferences = jsonb_set(
+        preferences, 
+        '{notifications, email}', 
+        'false'
+    ) WHERE id = 1;
+    ```
+    
+    **Why this matters:** No need to add columns. Preferences evolve without schema changes. New fields added instantly!
+    """)
     
     tips = [
         "Use JSONB instead of JSON for better performance",

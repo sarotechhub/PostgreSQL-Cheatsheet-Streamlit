@@ -34,6 +34,18 @@ def _render_basic_update() -> None:
     """Render basic update section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **UPDATE** statements modify existing data in tables:
+    
+    - **Single column update**: Change one field for rows matching criteria
+    - **Multiple columns**: Update several fields at once
+    - **WHERE clause**: Essential to specify which rows to update
+    - **Update all rows**: Risky! Omit WHERE only if you mean to update everything
+    - **CURRENT_TIMESTAMP**: Auto-set updated_at or modified timestamps
+    - **RETURNING clause**: See what was changed
+    - **FROM clause**: Update using data from another table/join
+    """)
+    
     layout.render_code_block("""
 -- Update single column for matching rows
 UPDATE users
@@ -72,11 +84,45 @@ WHERE u.id = lh.user_id
     """, title="SQL Examples")
     
     layout.render_tip("Always include WHERE clause to avoid updating all rows accidentally!")
+    
+    st.markdown("### 🏢 Real-World Example: Product Price Update After Discount")
+    st.markdown("""
+    **Scenario:** Running a 30% off sale on electronics category
+    
+    ```sql
+    -- Update sale prices for all electronics
+    UPDATE products
+    SET 
+        sale_price = price * 0.7,
+        on_sale = TRUE,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE category_id = 5  -- Electronics
+      AND stock_level > 0
+      AND is_active = TRUE
+    RETURNING id, name, price, sale_price;
+    
+    -- RETURNING shows which products were updated for verification
+    ```
+    
+    **Why this matters:** WHERE clause ensures only active products in the right category get updated. RETURNING verifies the sale price calculation worked correctly.
+    """)
 
 
 def _render_advanced_update() -> None:
     """Render advanced update section."""
     layout = get_layout_manager()
+    
+    st.markdown("""
+    **Advanced UPDATE** techniques for complex modifications:
+    
+    - **Subquery in SET**: Use results from other queries
+    - **CASE statements**: Conditional updates (different values for different rows)
+    - **Window functions**: Update with rankings or row numbers
+    - **Calculations**: Math operations on current values
+    - **UPDATE with LIMIT**: Update only a batch using subquery
+    - **Prepared statements**: Parameterized updates (safe, reusable)
+    - **UPDATE with EXISTS**: Update when related data exists
+    """)
     
     layout.render_code_block("""
 -- Update with subquery
@@ -141,6 +187,33 @@ WHERE EXISTS (SELECT 1 FROM login_attempts WHERE user_id = users.id);
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Updating User Tier After Reaching Purchase Threshold")
+    st.markdown("""
+    **Scenario:** Promote users from 'Bronze' to 'Silver' tier when they spend $500
+    
+    ```sql
+    -- Promote qualifying users based on total spending
+    UPDATE users u
+    SET 
+        tier = CASE 
+            WHEN order_total >= 2000 THEN 'gold'
+            WHEN order_total >= 500 THEN 'silver'
+            ELSE 'bronze'
+        END,
+        tier_updated_at = CURRENT_TIMESTAMP
+    FROM (
+        SELECT user_id, SUM(total) as order_total
+        FROM orders
+        WHERE status = 'completed'
+        GROUP BY user_id
+    ) stats
+    WHERE u.id = stats.user_id
+      AND u.tier != CASE WHEN stats.order_total >= 2000 THEN 'gold' WHEN stats.order_total >= 500 THEN 'silver' ELSE 'bronze' END;
+    ```
+    
+    **Why this matters:** Uses CASE for tiered logic and calculates from related orders table, automating loyalty rewards without manual intervention.
+    """)
     
     tips = [
         "ALWAYS test UPDATE with SELECT first to verify WHERE conditions",

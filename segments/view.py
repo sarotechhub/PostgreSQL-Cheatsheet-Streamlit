@@ -39,6 +39,18 @@ def _render_create_view() -> None:
     """Render create view section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Views** are saved queries that act like virtual tables:
+    
+    - **Simple view**: SELECT from one table with filtering
+    - **Complex view**: JOINs, aggregations, and multiple tables
+    - **CREATE OR REPLACE**: Update existing view (same structure)
+    - **Temporary view**: Session-only views (auto-deleted at disconnect)
+    - **Materialized view**: Pre-computed results stored as physical data
+    - **Security barrier**: Prevents subquery attacks (row-level security)
+    - **Regular vs materialized**: Regular = computed on query, materialized = pre-computed
+    """)
+    
     layout.render_code_block("""
 -- Simple view
 CREATE VIEW active_users AS
@@ -165,6 +177,35 @@ WHERE definition LIKE '%users%';
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Simplify Dashboard Queries with Views")
+    st.markdown("""
+    **Scenario:** Dashboard needs active users with their order stats
+    
+    ```sql
+    -- Create view that hides complexity from dashboard
+    CREATE VIEW dashboard_user_stats AS
+    SELECT 
+        u.id,
+        u.username,
+        u.email,
+        COUNT(o.id) as total_orders,
+        SUM(o.total_amount) as lifetime_value,
+        MAX(o.order_date) as last_order_date,
+        AVG(o.total_amount) as avg_order_value
+    FROM users u
+    LEFT JOIN orders o ON u.id = o.customer_id
+    WHERE u.is_active = TRUE
+      AND u.deleted_at IS NULL
+    GROUP BY u.id, u.username, u.email;
+    
+    -- Dashboard just does simple query (views hide complexity)
+    SELECT * FROM dashboard_user_stats 
+    ORDER BY lifetime_value DESC;
+    ```
+    
+    **Why this matters:** Dashboard developers don't need to know about JOIN/GROUP BY/WHERE logic. If business rules change (e.g., exclude test users), you update the view once - all dashboards benefit!
+    """)
     
     tips = [
         "Use views to abstract complex queries",

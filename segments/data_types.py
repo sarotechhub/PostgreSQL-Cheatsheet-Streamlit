@@ -44,6 +44,19 @@ def _render_numeric_types() -> None:
     """Render numeric types section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Numeric Types** store numbers with different ranges and precision:
+    
+    - **SMALLINT**: Small integers (2 bytes) - use for small numbers
+    - **INTEGER/INT**: Standard integers (4 bytes) - most common
+    - **BIGINT**: Large integers (8 bytes) - for very large numbers
+    - **DECIMAL/NUMERIC**: Exact decimal precision - use for money
+    - **REAL**: Single precision floating point (less accurate)
+    - **DOUBLE PRECISION**: Double precision floating point
+    - **SERIAL**: Auto-incrementing integer (use for IDs)
+    - **BIGSERIAL**: Auto-incrementing bigint (for large datasets)
+    """)
+    
     layout.render_code_block("""
 -- SMALLINT - 2 bytes, range: -32,768 to 32,767
 CREATE TABLE table1 (
@@ -262,6 +275,47 @@ CREATE TABLE shapes (
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Choosing Right Types for E-Commerce")
+    st.markdown("""
+    **Scenario:** Design product table with prices, inventory, and classifications
+    
+    ```sql
+    CREATE TABLE products (
+        id BIGSERIAL PRIMARY KEY,  -- BIGSERIAL for future growth
+        
+        sku VARCHAR(50) NOT NULL UNIQUE,  -- Fixed-length identifier
+        name VARCHAR(255) NOT NULL,  -- Product name
+        description TEXT,  -- Long descriptions
+        
+        price DECIMAL(10, 2) NOT NULL,  -- DECIMAL for money, never FLOAT!
+        cost DECIMAL(10, 2),
+        
+        stock_level INT DEFAULT 0,  -- Inventory count
+        
+        status status_enum DEFAULT 'active',  -- ENUM for known values
+        categories TEXT[] DEFAULT ARRAY[]::TEXT[],  -- ARRAY for tags
+        
+        attributes JSONB DEFAULT '{}',  -- Color, size, custom attrs
+        
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        
+        -- Constraints to enforce data integrity
+        CHECK (price > cost),
+        CHECK (stock_level >= 0)
+    );
+    
+    -- Why this matters:
+    -- DECIMAL(10,2) = exactly $99.99, no floating point errors
+    -- VARCHAR vs TEXT: VARCHAR requires specifying length
+    -- ENUM = can't insert invalid status values
+    -- ARRAY = store multiple categories without join table for tags
+    -- JSONB = extensible attributes without modifying schema
+    ```
+    
+    **Why this matters:** Right types prevent bugs. DECIMAL doesn't round 0.1+0.2=0.30000000001. ENUM prevents invalid statuses. ARRAY stores lists efficiently.
+    """)
     
     tips = [
         "Use BIGSERIAL for primary keys to avoid overflow",

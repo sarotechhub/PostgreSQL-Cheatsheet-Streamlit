@@ -34,6 +34,19 @@ def _render_create_trigger() -> None:
     """Render create trigger section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Triggers** are automated actions that run when table data changes:
+    
+    - **Trigger function**: The code that executes (must return TRIGGER type)
+    - **BEFORE/AFTER**: Run before or after the triggering event
+    - **INSERT/UPDATE/DELETE**: Trigger on specific data modification event
+    - **FOR EACH ROW**: Execute once per affected row (vs once per statement)
+    - **NEW**: Reference to new row values (for INSERT/UPDATE)
+    - **OLD**: Reference to old row values (for DELETE/UPDATE)
+    - **Conditional triggers (WHEN)**: Only fire under specific conditions
+    - **RAISE EXCEPTION**: Abort the operation with an error message
+    """)
+    
     layout.render_code_block("""
 -- Trigger function (called by trigger)
 CREATE FUNCTION update_user_timestamp() RETURNS TRIGGER AS $$
@@ -160,6 +173,35 @@ WHERE trigger_schema = 'public';
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Automatically Update Last Modified Timestamp")
+    st.markdown("""
+    **Scenario:** Track when any user profile was last modified
+    
+    ```sql
+    -- Trigger function to auto-update modified_at
+    CREATE FUNCTION update_user_modified() RETURNS TRIGGER AS $$
+    BEGIN
+        NEW.modified_at = CURRENT_TIMESTAMP;
+        NEW.modifier_id = current_user_id();  -- Track who modified it
+        RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+    
+    -- Attach to UPDATE operations
+    CREATE TRIGGER users_update_modified
+    BEFORE UPDATE ON users
+    FOR EACH ROW
+    WHEN (OLD.* IS DISTINCT FROM NEW.*)  -- Only if something actually changed
+    EXECUTE FUNCTION update_user_modified();
+    
+    -- Now whenever someone updates a user, modified_at is automatic
+    UPDATE users SET email = 'newemail@test.com' WHERE id = 5;
+    -- modified_at is automatically set to NOW()
+    ```
+    
+    **Why this matters:** Eliminates bug where developers forget to update the timestamp. Automatically tracks data lineage and modification history.
+    """)
     
     tips = [
         "Keep trigger functions small and focused",

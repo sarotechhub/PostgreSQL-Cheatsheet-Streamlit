@@ -34,9 +34,21 @@ def _render_create_function() -> None:
     """Render create function section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Stored Functions** are reusable SQL code blocks that encapsulate logic:
+    
+    - **SQL functions**: Simple functions using pure SQL (fast, no procedural logic)
+    - **PL/pgSQL functions**: Procedural language functions with variables, loops, conditions
+    - **Function parameters**: Input parameters with types (e.g., INT, VARCHAR, DECIMAL)
+    - **Return types**: Single value, TABLE, or SETOF results
+    - **Default parameters**: Optional parameters with default values
+    - **RETURNS TABLE**: Return result sets formatted as a table
+    - **LANGUAGE**: SQL or plpgsql (procedural language)
+    """)
+    
     layout.render_code_block("""
 -- Simple SQL function
-CREATE FUNCTION get_user_post_count(user_id INT) 
+CREATE FUNCTION get_user_post_count(user_id INT)
 RETURNS INT AS $$
     SELECT COUNT(*) FROM posts WHERE user_id = $1;
 $$ LANGUAGE SQL;
@@ -145,6 +157,47 @@ SELECT prosrc FROM pg_proc WHERE proname = 'get_user_post_count';
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Calculate Customer Loyalty Discount")
+    st.markdown("""
+    **Scenario:** Automatically calculate discount based on customer tenure and purchase history
+    
+    ```sql
+    -- Create function to compute loyalty discount
+    CREATE FUNCTION calculate_customer_discount(customer_id INT)
+    RETURNS DECIMAL AS $$
+    DECLARE
+        years_member INT;
+        total_spent DECIMAL;
+        discount_percent DECIMAL := 0;
+    BEGIN
+        -- Get customer tenure
+        SELECT EXTRACT(YEAR FROM AGE(created_at))
+        INTO years_member
+        FROM customers WHERE id = customer_id;
+        
+        -- Get total spending
+        SELECT SUM(total) INTO total_spent FROM orders WHERE customer_id = customer_id;
+        
+        -- Apply tiered discount
+        IF years_member >= 5 AND total_spent > 10000 THEN
+            discount_percent := 15;
+        ELSIF years_member >= 3 AND total_spent > 5000 THEN
+            discount_percent := 10;
+        ELSIF total_spent > 1000 THEN
+            discount_percent := 5;
+        END IF;
+        
+        RETURN discount_percent;
+    END;
+    $$ LANGUAGE plpgsql;
+    
+    -- Use in application
+    SELECT calculate_customer_discount(123) as loyalty_discount;
+    ```
+    
+    **Why this matters:** Centralizing loyalty logic in database ensures consistency across your app. Every order applies the same discount rules automatically.
+    """)
     
     tips = [
         "Use parameter placeholders ($1, $2) to prevent SQL injection",

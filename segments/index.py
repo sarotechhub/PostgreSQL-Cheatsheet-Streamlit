@@ -44,6 +44,20 @@ def _render_create_index() -> None:
     """Render create index section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Indexes** speed up data retrieval by creating lookup structures:
+    
+    - **Single column index**: Fast lookups on one column
+    - **Multi-column (composite) index**: Fast lookups on multiple columns together
+    - **UNIQUE index**: Combines uniqueness constraint with performance
+    - **BTREE (default)**: Efficient for range queries and equality
+    - **HASH**: Very fast equality checks, no range queries
+    - **GIN/GIST**: Special indexes for arrays, full-text search, JSON
+    - **Partial index**: Index only rows matching a condition
+    - **CONCURRENTLY**: Create index without locking table
+    - **Trade-off**: Faster queries, slower inserts/updates, uses disk space
+    """)
+    
     layout.render_code_block("""
 -- Basic index on single column
 CREATE INDEX idx_users_email 
@@ -224,6 +238,32 @@ SELECT * FROM users WHERE email = 'test@example.com';
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Optimize Slow User Search Query")
+    st.markdown("""
+    **Scenario:** User search is slow, taking 5+ seconds for large table
+    
+    ```sql
+    -- BEFORE: No index, full table scan
+    EXPLAIN ANALYZE 
+    SELECT * FROM users WHERE email = 'john@example.com';
+    -- Output: Seq Scan on users (5000ms)
+    
+    -- ADD INDEX on frequently searched column
+    CREATE INDEX idx_users_email ON users(email);
+    
+    -- AFTER: Now instant lookup
+    EXPLAIN ANALYZE 
+    SELECT * FROM users WHERE email = 'john@example.com';
+    -- Output: Index Scan using idx_users_email (10ms) - 500x faster!
+    
+    -- For autocomplete search
+    CREATE INDEX idx_users_username_pattern ON users(username text_pattern_ops);
+    SELECT * FROM users WHERE username LIKE 'john%';
+    ```
+    
+    **Why this matters:** Indexes speed up searches dramatically. Without them, every query scans the entire table. For 1 million users, difference is 5ms vs 5000ms!
+    """)
     
     tips = [
         "Index columns used frequently in WHERE, JOIN, and ORDER BY clauses",

@@ -34,6 +34,20 @@ def _render_aggregate_functions() -> None:
     """Render aggregate functions section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Aggregate Functions** combine multiple rows into summary results:
+    
+    - **COUNT()**: Counts rows (or non-NULL values in column)
+    - **SUM()**: Adds up numeric values
+    - **AVG()**: Calculates average value
+    - **MIN() / MAX()**: Finds minimum or maximum value
+    - **STRING_AGG()**: Concatenates string values
+    - **ARRAY_AGG()**: Combines values into array
+    - **GROUP BY**: Groups data for aggregation
+    - **FILTER clause**: Conditional aggregation (count IF)
+    - **DISTINCT in aggregate**: Count/sum unique values only
+    """)
+    
     layout.render_code_block("""
 -- COUNT - count rows
 SELECT COUNT(*) as total_users FROM users;
@@ -170,6 +184,37 @@ FROM leaderboard;
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Monthly Sales Report with Rankings")
+    st.markdown("""
+    **Scenario:** Show sales performance across regions with rankings
+    
+    ```sql
+    SELECT 
+        EXTRACT(MONTH FROM order_date) as month,
+        region,
+        SUM(total) as monthly_sales,
+        COUNT(DISTINCT customer_id) as customers,
+        AVG(total) as avg_order_value,
+        
+        -- Ranking this region's sales against all others
+        RANK() OVER (PARTITION BY EXTRACT(MONTH FROM order_date) ORDER BY SUM(total) DESC) as region_rank,
+        
+        -- Month-over-month comparison
+        LAG(SUM(total)) OVER (PARTITION BY region ORDER BY EXTRACT(MONTH FROM order_date)) as prev_month_sales,
+        
+        -- Running annual total
+        SUM(SUM(total)) OVER (PARTITION BY region ORDER BY EXTRACT(MONTH FROM order_date)) as ytd_sales
+        
+    FROM orders
+    WHERE EXTRACT(YEAR FROM order_date) = 2025
+    GROUP BY month, region;
+    
+    -- Result: Top performers highlighted, trends visible at a glance!
+    ```
+    
+    **Why this matters:** Window functions let you calculate rankings and trends without complex application code. Compare regions, months, and rolling totals in one query.
+    """)
     
     tips = [
         "Use COUNT(DISTINCT column) for counting unique values",

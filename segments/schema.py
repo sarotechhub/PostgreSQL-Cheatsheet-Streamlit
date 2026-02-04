@@ -44,6 +44,18 @@ def _render_create_schema() -> None:
     """Render create schema section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Schemas** organize database objects into logical namespaces:
+    
+    - **Schema**: A container for tables, views, functions, indexes, etc.
+    - **public schema**: Default schema (exists by default)
+    - **Namespace separation**: Same table name in different schemas allowed
+    - **Organization**: Group related objects together
+    - **Authorization**: Control access at schema level
+    - **Search path**: Order of schemas to check when referencing objects
+    - **schema.table notation**: Fully qualified name (schema.table_name)
+    """)
+    
     layout.render_code_block("""
 -- Create basic schema
 CREATE SCHEMA public;
@@ -166,6 +178,35 @@ GRANT SELECT ON TABLES TO readonly_user;
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Organizing Multi-Tenant SaaS Database")
+    st.markdown("""
+    **Scenario:** Single database serves multiple customers, need data separation
+    
+    ```sql
+    -- Create schema per customer
+    CREATE SCHEMA customer_acme;
+    CREATE SCHEMA customer_techcorp;
+    
+    -- Same table structure, different schemas
+    CREATE TABLE customer_acme.users (id SERIAL PRIMARY KEY, ...);
+    CREATE TABLE customer_techcorp.users (id SERIAL PRIMARY KEY, ...);
+    
+    -- Grant each customer access only to their schema
+    CREATE ROLE customer_acme_app LOGIN;
+    GRANT USAGE ON SCHEMA customer_acme TO customer_acme_app;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA customer_acme TO customer_acme_app;
+    
+    CREATE ROLE customer_techcorp_app LOGIN;
+    GRANT USAGE ON SCHEMA customer_techcorp TO customer_techcorp_app;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA customer_techcorp TO customer_techcorp_app;
+    
+    -- In application, connect with customer-specific role
+    -- App connects as 'customer_acme_app', can only access customer_acme schema
+    ```
+    
+    **Why this matters:** Schemas provide logical data separation. Even if someone breaches one customer's app credentials, they can't access other customers' data!
+    """)
     
     tips = [
         "Use schemas to organize tables by domain or application module",

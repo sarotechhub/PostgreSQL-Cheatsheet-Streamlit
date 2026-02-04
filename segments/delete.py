@@ -39,6 +39,17 @@ def _render_basic_delete() -> None:
     """Render basic delete section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **DELETE** statements remove rows from tables. Key patterns:
+    
+    - **Delete matching rows**: Use WHERE to specify which rows to remove
+    - **Delete by primary key**: Remove specific record by ID
+    - **Delete with conditions**: Multiple conditions (AND/OR) to target specific rows
+    - **RETURNING clause**: See which rows were deleted
+    - **Delete all rows**: Dangerous! Only use when you mean to empty entire table
+    - **Delete with IN clause**: Remove multiple rows by ID list
+    """)
+    
     layout.render_code_block("""
 -- Delete rows matching condition
 DELETE FROM users
@@ -67,11 +78,43 @@ WHERE id IN (1, 2, 3, 4, 5);
     """, title="SQL Examples")
     
     layout.render_warning("DELETE without WHERE clause deletes ALL rows! Always be careful!")
+    
+    st.markdown("### 🏢 Real-World Example: Cleaning Up Old Temporary Records")
+    st.markdown("""
+    **Scenario:** Remove failed payment attempts older than 90 days
+    
+    ```sql
+    -- Clean up old failed transactions
+    DELETE FROM failed_payments
+    WHERE created_at < CURRENT_DATE - INTERVAL '90 days'
+      AND status = 'expired'
+    RETURNING id, amount, failed_at;
+    
+    -- Check first with SELECT to see what will be deleted
+    SELECT COUNT(*) FROM failed_payments WHERE created_at < CURRENT_DATE - INTERVAL '90 days';
+    -- Result: 15000 records
+    ```
+    
+    **Why this matters:** Deleting old records reduces database bloat, improves query speed, and complies with PCI-DSS (payment card data retention rules).
+    """)
 
 
 def _render_advanced_delete() -> None:
     """Render advanced delete section."""
     layout = get_layout_manager()
+    
+    st.markdown("""
+    **Advanced DELETE** techniques for complex scenarios:
+    
+    - **Delete with subquery**: Remove rows found by another query
+    - **Delete with JOIN (FROM clause)**: Delete based on related table data
+    - **Delete with EXISTS**: Remove when related data exists/doesn't exist
+    - **Delete duplicates**: Keep first occurrence, remove rest
+    - **Delete old records**: Remove data beyond retention period
+    - **Soft delete**: Mark as deleted instead of physical removal
+    - **Cascading deletes**: Remove related data from multiple tables
+    - **Batch delete**: Delete in chunks for performance
+    """)
     
     layout.render_code_block("""
 -- Delete using subquery
@@ -130,6 +173,38 @@ def _render_safe_patterns() -> None:
     """Render safe delete patterns section."""
     layout = get_layout_manager()
     
+    st.markdown("### 🏢 Real-World Example: Archiving Data Before Deletion")
+    st.markdown("""
+    **Scenario:** Keep 7-year audit trail, then delete per regulatory requirements
+    
+    ```sql
+    -- Archive old transaction records before deleting (SOX compliance)
+    BEGIN;
+    
+    -- Step 1: Move to archive table
+    INSERT INTO transactions_archive
+    SELECT * FROM transactions
+    WHERE transaction_date < CURRENT_DATE - INTERVAL '7 years';
+    
+    -- Step 2: Verify count
+    SELECT COUNT(*) as archived_count FROM transactions_archive 
+    WHERE transaction_date < CURRENT_DATE - INTERVAL '7 years';
+    
+    -- Step 3: Delete from main table
+    DELETE FROM transactions
+    WHERE transaction_date < CURRENT_DATE - INTERVAL '7 years';
+    
+    COMMIT;
+    ```
+    
+    **Why this matters:** Protects your data for legal compliance while keeping main table small and fast. Transaction ensures both operations succeed together.
+    """)
+
+
+def _render_best_practices() -> None:
+    """Render best practices section."""
+    layout = get_layout_manager()
+    
     layout.render_code_block("""
 -- SAFE PATTERN 1: Preview before delete
 -- Step 1: Check what will be deleted
@@ -176,11 +251,6 @@ DELETE FROM users WHERE is_active = FALSE;
 -- Keep backup for review
 COMMIT;
     """, title="SQL Examples")
-
-
-def _render_best_practices() -> None:
-    """Render best practices section."""
-    layout = get_layout_manager()
     
     tips = [
         "ALWAYS use WHERE clause in DELETE statements - never delete all rows accidentally",
@@ -194,6 +264,6 @@ def _render_best_practices() -> None:
         "Cascade DELETE is powerful but dangerous - test thoroughly",
         "Set up backups before bulk delete operations"
     ]
-    
+
     for tip in tips:
         layout.render_tip(tip)

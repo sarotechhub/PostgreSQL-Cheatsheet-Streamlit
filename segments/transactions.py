@@ -34,6 +34,18 @@ def _render_transaction_control() -> None:
     """Render transaction control section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Transactions** ensure data consistency by executing multiple statements atomically:
+    
+    - **BEGIN**: Start a transaction (all changes grouped together)
+    - **COMMIT**: Save all changes permanently
+    - **ROLLBACK**: Undo all changes if something goes wrong
+    - **SAVEPOINT**: Create checkpoints within a transaction for partial rollback
+    - **ROLLBACK TO**: Rollback only to a specific savepoint, not entire transaction
+    - **Autocommit**: Individual statements auto-committed (no transaction control)
+    - **Exception handling**: Handle errors and decide to commit or rollback
+    """)
+    
     layout.render_code_block("""
 -- Basic transaction
 BEGIN;
@@ -78,6 +90,31 @@ COMMIT;
 def _render_isolation_levels() -> None:
     """Render isolation levels section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Money Transfer Between Accounts")
+    st.markdown("""
+    **Scenario:** Transfer $100 from Account A to Account B
+    
+    ```sql
+    -- If either fails, both are rolled back (money doesn't disappear)
+    BEGIN;
+    
+    UPDATE accounts 
+    SET balance = balance - 100
+    WHERE account_id = 'A';
+    
+    UPDATE accounts 
+    SET balance = balance + 100
+    WHERE account_id = 'B';
+    
+    INSERT INTO transfer_log (from_account, to_account, amount, timestamp)
+    VALUES ('A', 'B', 100, CURRENT_TIMESTAMP);
+    
+    COMMIT;  -- All succeed together, or ROLLBACK if error occurs
+    ```
+    
+    **Why this matters:** Without transactions, Account A might deduct money but Server crashes before adding to Account B - customer loses $100! Transactions prevent this disaster.
+    """)
     
     layout.render_code_block("""
 -- READ UNCOMMITTED (default behavior in PostgreSQL)
@@ -135,6 +172,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
     """, title="SQL Examples")
+    
+    layout.render_tip("Understand isolation levels to prevent race conditions and data anomalies")
 
 
 def _render_best_practices() -> None:

@@ -47,7 +47,18 @@ def render_segment() -> None:
 
 def _render_create_database() -> None:
     """Render create database section."""
-    st.markdown("### Basic Creation")
+    st.markdown("""
+    **Database Creation** sets up a new isolated database:
+    
+    - **CREATE DATABASE**: Creates a new database for applications
+    - **OWNER**: User who owns the database (for permissions)
+    - **ENCODING**: Character encoding (usually UTF8)
+    - **TEMPLATE**: Copy structure from existing database
+    - **LOCALE**: Language and sorting rules
+    - **TABLESPACE**: Physical location on disk
+    - **Naming**: Use lowercase, underscores (not hyphens or spaces)
+    - **Isolation**: Each database is separate, can't query across them
+    """)
     layout = get_layout_manager()
     
     layout.render_code_block("""
@@ -183,6 +194,42 @@ RESET ALL;
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Setting Up Databases for Development and Production")
+    st.markdown("""
+    **Scenario:** Create separate databases for dev, staging, and production environments
+    
+    ```sql
+    -- Production database (strict settings)
+    CREATE DATABASE myapp_prod
+    OWNER postgres
+    ENCODING 'UTF8'
+    CONNECTION LIMIT 50;
+    
+    -- Staging database (copy of production for testing)
+    CREATE DATABASE myapp_staging
+    OWNER postgres
+    TEMPLATE myapp_prod
+    CONNECTION LIMIT 20;
+    
+    -- Development database (relaxed settings for testing)
+    CREATE DATABASE myapp_dev
+    OWNER postgres
+    CONNECTION LIMIT 100;
+    
+    -- Create dedicated users for each environment
+    CREATE ROLE prod_app WITH LOGIN PASSWORD 'secure_prod_pass';
+    CREATE ROLE staging_app WITH LOGIN PASSWORD 'secure_staging_pass';
+    CREATE ROLE dev_app WITH LOGIN PASSWORD 'dev_pass';
+    
+    -- Grant access (production is most restrictive)
+    GRANT CONNECT ON DATABASE myapp_prod TO prod_app;
+    GRANT USAGE ON SCHEMA public TO prod_app;
+    GRANT SELECT ON ALL TABLES IN SCHEMA public TO prod_app;
+    ```
+    
+    **Why this matters:** Prevents developers from accidentally deleting production data. Each environment has separate credentials and permissions.
+    """)
     
     tips = [
         "Use explicit ENCODING 'UTF8' for international text support",

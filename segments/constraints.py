@@ -39,6 +39,20 @@ def _render_constraint_types() -> None:
     """Render constraint types section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Constraints** enforce data integrity rules:
+    
+    - **PRIMARY KEY**: Uniquely identifies each row (one per table)
+    - **UNIQUE**: Ensures column values are unique (multiple allowed)
+    - **NOT NULL**: Requires column to have a value
+    - **FOREIGN KEY**: References primary key in another table
+    - **CHECK**: Validates data (e.g., price > 0)
+    - **DEFAULT**: Provides value if none supplied
+    - **EXCLUDE**: Prevents overlapping data (ranges, ranges)
+    - **Referential integrity**: Maintains relationships between tables
+    - **ON DELETE/UPDATE**: Actions when referenced rows change
+    """)
+    
     layout.render_code_block("""
 -- PRIMARY KEY - Unique identifier for row
 CREATE TABLE users (
@@ -203,6 +217,34 @@ WHERE referenced_table_name = 'users';
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Enforce Business Rules with Constraints")
+    st.markdown("""
+    **Scenario:** Prevent invalid data at database level for e-commerce system
+    
+    ```sql
+    CREATE TABLE products (
+        id SERIAL PRIMARY KEY,
+        sku VARCHAR(50) UNIQUE NOT NULL,  -- Prevent duplicate SKUs
+        name VARCHAR(255) NOT NULL,
+        price DECIMAL(10, 2) NOT NULL CHECK (price > 0),  -- No negative prices
+        cost DECIMAL(10, 2) NOT NULL CHECK (cost > 0),
+        stock INT DEFAULT 0 CHECK (stock >= 0),  -- No negative inventory
+        CONSTRAINT price_higher_than_cost CHECK (price > cost)  -- Price > cost
+    );
+    
+    CREATE TABLE orders (
+        id BIGSERIAL PRIMARY KEY,
+        customer_id INT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        status VARCHAR(20) CHECK (status IN ('pending', 'shipped', 'delivered', 'cancelled')),
+        total DECIMAL(12, 2) NOT NULL CHECK (total >= 0),
+        created_at TIMESTAMP NOT NULL,
+        shipped_at TIMESTAMP CHECK (shipped_at >= created_at OR shipped_at IS NULL)
+    );
+    ```
+    
+    **Why this matters:** Constraints prevent bugs before they happen. Trying to insert price=-100 or stock=-50 gets rejected immediately, not hours later when customers complain.
+    """)
     
     tips = [
         "Use PRIMARY KEY on every table - it's essential for data integrity",

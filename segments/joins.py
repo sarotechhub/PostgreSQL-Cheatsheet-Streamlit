@@ -34,6 +34,18 @@ def _render_join_types() -> None:
     """Render join types section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **JOIN Types** combine data from multiple tables based on relationships:
+    
+    - **INNER JOIN**: Returns only rows where join condition matches in BOTH tables
+    - **LEFT JOIN**: Returns all rows from left table + matching rows from right
+    - **RIGHT JOIN**: Returns all rows from right table + matching rows from left
+    - **FULL OUTER JOIN**: Returns all rows from both tables (matching + non-matching)
+    - **CROSS JOIN**: Cartesian product - combines every row with every other row
+    - **Self Join**: Join a table to itself (useful for hierarchical data)
+    - **Multiple Joins**: Combine more than 2 tables in one query
+    """)
+    
     layout.render_code_block("""
 -- INNER JOIN - only matching rows from both tables
 SELECT 
@@ -170,6 +182,33 @@ INNER JOIN posts p USING (id);  -- Assumes same column name
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Order Report with Customer and Product Info")
+    st.markdown("""
+    **Scenario:** Generate monthly sales report showing customer names, product names, and amounts
+    
+    ```sql
+    -- Get complete order information across 3 tables
+    SELECT 
+        o.id as order_id,
+        c.name as customer_name,
+        c.email,
+        p.name as product_name,
+        p.category,
+        oi.quantity,
+        oi.unit_price,
+        (oi.quantity * oi.unit_price) as line_total,
+        o.order_date
+    FROM orders o
+    INNER JOIN customers c ON o.customer_id = c.id
+    INNER JOIN order_items oi ON o.id = oi.order_id
+    INNER JOIN products p ON oi.product_id = p.id
+    WHERE o.order_date >= CURRENT_DATE - INTERVAL '1 month'
+    ORDER BY o.order_date DESC;
+    ```
+    
+    **Why this matters:** Without JOINS, you'd need to manually fetch customers and products for each order in your code. JOINS do this efficiently in one query!
+    """)
     
     tips = [
         "Use explicit JOIN syntax instead of comma-separated tables",

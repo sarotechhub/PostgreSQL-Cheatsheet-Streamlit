@@ -34,6 +34,20 @@ def _render_install_extensions() -> None:
     """Render install extensions section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Extensions** add functionality to PostgreSQL:
+    
+    - **CREATE EXTENSION**: Install available extension
+    - **CREATE EXTENSION IF NOT EXISTS**: Safe installation (skip if exists)
+    - **Available extensions**: Available via PostgreSQL installation
+    - **uuid-ossp**: Generate UUID identifiers
+    - **pgcrypto**: Encryption and hashing functions
+    - **hstore**: Key-value data type
+    - **PostGIS**: Geographic/spatial data
+    - **citext**: Case-insensitive text type
+    - **pg_trgm**: Text similarity and full-text search
+    """)
+    
     layout.render_code_block("""
 -- Install extension
 CREATE EXTENSION uuid-ossp;
@@ -118,6 +132,50 @@ SELECT '[2024-01-01, 2024-12-31]'::daterange;
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Build Location-Based App with PostGIS")
+    st.markdown("""
+    **Scenario:** Uber-like app needs to find drivers near user
+    
+    ```sql
+    -- Install extension
+    CREATE EXTENSION IF NOT EXISTS postgis;
+    
+    -- Create drivers table with location
+    CREATE TABLE drivers (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255),
+        vehicle VARCHAR(100),
+        location GEOMETRY(Point, 4326),  -- Lat/Long with spatial index
+        is_online BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    -- Add spatial index for fast location queries
+    CREATE INDEX idx_drivers_location ON drivers USING GIST(location);
+    
+    -- Insert driver locations (latitude, longitude)
+    INSERT INTO drivers (name, vehicle, location) VALUES
+    ('John', 'Toyota Prius', ST_SetSRID(ST_MakePoint(-73.9857, 40.7484), 4326)),
+    ('Jane', 'Honda Civic', ST_SetSRID(ST_MakePoint(-73.9876, 40.7505), 4326));
+    
+    -- Find nearby drivers (within 1 km)
+    SELECT 
+        id, name, vehicle,
+        ST_Distance(location, ST_SetSRID(ST_MakePoint(-73.9900, 40.7500), 4326))::numeric::int as distance_meters
+    FROM drivers
+    WHERE is_online = TRUE
+      AND ST_DWithin(
+          location,
+          ST_SetSRID(ST_MakePoint(-73.9900, 40.7500), 4326),
+          1000  -- 1000 meters
+      )
+    ORDER BY distance_meters
+    LIMIT 5;
+    ```
+    
+    **Why this matters:** PostGIS makes location queries blazing fast. Without it, you'd calculate distances in code for every driver!
+    """)
     
     tips = [
         "Verify extension availability before creating",

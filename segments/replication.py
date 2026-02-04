@@ -34,6 +34,20 @@ def _render_replication_setup() -> None:
     """Render replication setup section."""
     layout = get_layout_manager()
     
+    st.markdown("""
+    **Replication** copies data from primary to standby servers:
+    
+    - **Primary server**: Main database receiving writes
+    - **Standby server**: Copy of primary for failover/read scaling
+    - **Streaming replication**: Real-time log shipping
+    - **WAL (Write-Ahead Log)**: Transaction log sent to standby
+    - **Synchronous replication**: Wait for standby before committing
+    - **Asynchronous replication**: Commit before standby confirms
+    - **Replication slots**: Ensure standby doesn't miss WAL
+    - **High availability**: Automatic failover if primary fails
+    - **Read-only standby**: Use for reporting without burdening primary
+    """)
+    
     layout.render_code_block("""
 -- PRIMARY SERVER (postgresql.conf)
 # Enable WAL archiving
@@ -167,6 +181,61 @@ FROM pg_stat_replication;
 def _render_best_practices() -> None:
     """Render best practices section."""
     layout = get_layout_manager()
+    
+    st.markdown("### 🏢 Real-World Example: Disaster Recovery with Replication")
+    st.markdown("""
+    **Scenario:** Production database crashes. Need instant failover to standby in another data center
+    
+    ```
+    SETUP:
+    - Primary: New York (production)
+    - Standby: California (hot backup, read-only)
+    
+    PRIMARY CONFIG (postgresql.conf):
+    wal_level = replica
+    max_wal_senders = 10
+    wal_keep_size = 1GB
+    max_replication_slots = 10
+    
+    -- Create replication user
+    CREATE ROLE replicator WITH REPLICATION LOGIN PASSWORD 'secure_password';
+    
+    STANDBY SETUP:
+    1. Take base backup from primary
+       pg_basebackup -h primary.example.com -D /var/lib/postgresql/14/main -U replicator
+    
+    2. Create recovery configuration
+       # recovery.conf
+       primary_conninfo = 'host=primary.example.com user=replicator password=secure_password'
+       
+    3. Start standby server
+       pg_ctl start
+    
+    DURING NORMAL OPERATION:
+    -- Primary handles all writes
+    SELECT count(*) FROM users;  -- On primary, instant
+    
+    -- Standby handles reads (offload reporting)
+    SELECT count(*) FROM orders;  -- On standby, instant
+    
+    ON DISASTER (Primary dies):
+    -- Promote standby to primary
+    SELECT pg_promote();
+    -- Standby is now primary, accepts writes
+    
+    -- Redirect applications to new primary (California)
+    -- Previous primary can be added as standby once fixed
+    
+    MONITORING:
+    -- Check replication lag
+    SELECT 
+        client_addr,
+        (pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn))::text as lag_bytes
+    FROM pg_stat_replication;
+    ```
+    
+    **Why this matters:** Without replication, primary crash = hours of downtime. With it, you're back online in seconds. SLA uptime goes from 99.5% to 99.99%!
+    """)
     
     tips = [
         "Use replication for high availability and read scaling",
